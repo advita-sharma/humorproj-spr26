@@ -1,0 +1,3 @@
+- If you need the database structure, refer to `schema.sql`
+- Always pick the top caption (highest votes) for each image.
+- Implement pagination: 30 image and caption pairs per page.
