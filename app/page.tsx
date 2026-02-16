@@ -1,5 +1,6 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Pagination from "./components/Pagination";
+import ProfileMenu from "./components/ProfileMenu";
 
 type Image = {
   id: string;
@@ -30,6 +31,13 @@ export default async function Home({
 }) {
   const params = await searchParams;
   const currentPage = Math.max(1, parseInt(params.page || "1", 10));
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const userName =
+    user?.user_metadata?.full_name ?? user?.email ?? "User";
 
   const [imagesResult, captionsResult] = await Promise.all([
     supabase.from("images").select("id, url, image_description").limit(1000),
@@ -113,6 +121,7 @@ export default async function Home({
             <span className="px-3 py-1.5 rounded-full bg-zinc-800/50 border border-zinc-700/50">
               {totalItems} entries
             </span>
+            <ProfileMenu name={userName} />
           </div>
         </div>
       </header>
