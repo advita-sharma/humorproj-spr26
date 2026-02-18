@@ -13,8 +13,8 @@ export default async function VotePage() {
     redirect("/login");
   }
 
-  // Run voted-IDs and all-captions queries in parallel
-  const [votedResult, captionsResult] = await Promise.all([
+  // Run voted-IDs and total caption count + captions in parallel
+  const [votedResult, captionsResult, countResult] = await Promise.all([
     supabase
       .from("caption_votes")
       .select("caption_id")
@@ -24,11 +24,17 @@ export default async function VotePage() {
       .select("id, content, image_id")
       .not("content", "is", null)
       .limit(200),
+    supabase
+      .from("captions")
+      .select("*", { count: "exact", head: true })
+      .not("content", "is", null),
   ]);
 
   const votedIds = new Set(
     (votedResult.data || []).map((r) => r.caption_id)
   );
+  const totalCaptions = countResult.count ?? 0;
+  const totalRemaining = totalCaptions - votedIds.size;
 
   // Filter out already-voted captions client-side
   const unvotedCaptions = (captionsResult.data || [])
@@ -40,7 +46,7 @@ export default async function VotePage() {
       <div className="min-h-screen bg-[#09090b]">
         <Header />
         <main className="max-w-lg mx-auto px-6 py-8">
-          <VoteCard initialCaptions={[]} />
+          <VoteCard initialCaptions={[]} totalRemaining={0} />
         </main>
       </div>
     );
@@ -73,7 +79,7 @@ export default async function VotePage() {
     <div className="min-h-screen bg-[#09090b]">
       <Header />
       <main className="max-w-lg mx-auto px-6 py-8">
-        <VoteCard initialCaptions={captions} />
+        <VoteCard initialCaptions={captions} totalRemaining={totalRemaining} />
       </main>
     </div>
   );

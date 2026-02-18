@@ -20,12 +20,15 @@ type VoteHistory = {
 
 export default function VoteCard({
   initialCaptions,
+  totalRemaining: initialRemaining,
 }: {
   initialCaptions: CaptionWithImage[];
+  totalRemaining: number;
 }) {
   const [queue, setQueue] = useState<CaptionWithImage[]>(initialCaptions);
   const [lastVote, setLastVote] = useState<VoteHistory | null>(null);
   const [votedCaptionIds, setVotedCaptionIds] = useState<Set<string>>(new Set());
+  const [votedCount, setVotedCount] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -108,6 +111,7 @@ export default function VoteCard({
 
       setLastVote({ caption: current, vote_value: voteValue });
       setVotedCaptionIds((prev) => new Set(prev).add(current.id));
+      setVotedCount((prev) => prev + 1);
       setQueue((prev) => prev.slice(1));
       setExitDirection(null);
       setDragX(0);
@@ -128,6 +132,7 @@ export default function VoteCard({
 
     // Put the card back at the front of the queue
     setQueue((prev) => [lastVote.caption, ...prev]);
+    setVotedCount((prev) => Math.max(0, prev - 1));
 
     // Update the existing row to flip the vote
     const flippedValue = lastVote.vote_value === 1 ? -1 : 1;
@@ -135,6 +140,12 @@ export default function VoteCard({
 
     setLastVote(null);
   }, [lastVote]);
+
+  const handleSkip = useCallback(() => {
+    if (!current || isAnimating) return;
+    // Move current card to the end of the queue (shuffle it back)
+    setQueue((prev) => [...prev.slice(1), prev[0]]);
+  }, [current, isAnimating]);
 
   // Pointer event handlers for swipe
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -202,8 +213,15 @@ export default function VoteCard({
     );
   }
 
+  const remaining = Math.max(0, initialRemaining - votedCount);
+
   return (
     <div className="flex flex-col items-center gap-6">
+      {/* Remaining counter */}
+      <p className="text-zinc-500 text-sm">
+        {remaining} caption{remaining !== 1 ? "s" : ""} left to rate
+      </p>
+
       {/* Card area with ? button outside */}
       <div className="relative w-full max-w-sm select-none">
         {/* ? button — outside card, top-right */}
@@ -320,6 +338,29 @@ export default function VoteCard({
               strokeLinecap="round"
               strokeLinejoin="round"
               d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
+            />
+          </svg>
+        </button>
+
+        {/* Skip / Refresh */}
+        <button
+          onClick={handleSkip}
+          disabled={isAnimating || queue.length <= 1}
+          className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-700/50 flex items-center justify-center text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-30 cursor-pointer"
+          title="Skip — see a different caption"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+            className="w-6 h-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"
             />
           </svg>
         </button>
