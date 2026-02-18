@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import Pagination from "./components/Pagination";
 import ProfileMenu from "./components/ProfileMenu";
@@ -39,59 +40,59 @@ export default async function Home({
   const userName =
     user?.user_metadata?.full_name ?? user?.email ?? "User";
 
-  const [imagesResult, captionsResult] = await Promise.all([
-    supabase.from("images").select("id, url, image_description").limit(1000),
-    supabase
-      .from("captions")
-      .select("id, content, image_id, like_count")
-      .order("like_count", { ascending: false })
-      .limit(5000),
-  ]);
+  // Fetch more captions than needed — after dedup by image we need at least 67 pairs
+  const { data: topCaptions, error: captionsError } = await supabase
+    .from("captions")
+    .select("id, content, image_id, like_count")
+    .not("content", "is", null)
+    .order("like_count", { ascending: false })
+    .limit(500);
 
-  if (imagesResult.error || captionsResult.error) {
-    const errorMsg =
-      imagesResult.error?.message || captionsResult.error?.message;
+  if (captionsError) {
     return (
       <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-8">
         <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6">
-          <p className="text-red-400">Error loading data: {errorMsg}</p>
+          <p className="text-red-400">Error loading data: {captionsError.message}</p>
         </div>
       </div>
     );
   }
 
-  const images = imagesResult.data || [];
-  const captions = captionsResult.data || [];
+  const captions = topCaptions || [];
 
-  const captionsByImage: Record<string, Caption[]> = {};
+  // Batch-fetch only the images we need
+  const imageIds = [...new Set(captions.map((c) => c.image_id))];
+  const { data: images } = imageIds.length > 0
+    ? await supabase
+        .from("images")
+        .select("id, url, image_description")
+        .in("id", imageIds)
+        .not("url", "is", null)
+    : { data: [] };
+
+  const imageMap = new Map(
+    (images || []).map((img) => [img.id, img])
+  );
+
+  // Build pairs — keep best caption per image, skip incomplete pairs
+  const bestByImage = new Map<string, Caption>();
   for (const caption of captions) {
-    if (!captionsByImage[caption.image_id]) {
-      captionsByImage[caption.image_id] = [];
+    if (!imageMap.has(caption.image_id)) continue;
+    const existing = bestByImage.get(caption.image_id);
+    if (!existing || caption.like_count > existing.like_count) {
+      bestByImage.set(caption.image_id, caption);
     }
-    captionsByImage[caption.image_id].push(caption);
   }
 
-  const imageCaptionPairs: ImageCaptionPair[] = [];
-  for (const image of images) {
-    const imageCaptions = captionsByImage[image.id] || [];
-    if (imageCaptions.length === 0) continue;
-
-    let bestCaption = imageCaptions[0];
-    for (const caption of imageCaptions) {
-      if (caption.like_count > bestCaption.like_count) {
-        bestCaption = caption;
-      }
-    }
-
-    imageCaptionPairs.push({
-      image,
-      caption: bestCaption,
-      likeCount: bestCaption.like_count,
+  const topPairs: ImageCaptionPair[] = [];
+  for (const [imageId, caption] of bestByImage) {
+    topPairs.push({
+      image: imageMap.get(imageId)!,
+      caption,
+      likeCount: caption.like_count,
     });
   }
-
-  imageCaptionPairs.sort((a, b) => b.likeCount - a.likeCount);
-  const topPairs = imageCaptionPairs.slice(0, TOP_FUNNIEST);
+  topPairs.sort((a, b) => b.likeCount - a.likeCount);
 
   const totalItems = topPairs.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
@@ -118,9 +119,12 @@ export default async function Home({
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-zinc-400">
-            <span className="px-3 py-1.5 rounded-full bg-zinc-800/50 border border-zinc-700/50">
-              {totalItems} entries
-            </span>
+            <Link
+              href="/vote"
+              className="px-4 py-1.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-medium hover:from-violet-600 hover:to-fuchsia-600 shadow-lg shadow-violet-500/25"
+            >
+              Vote
+            </Link>
             <ProfileMenu name={userName} />
           </div>
         </div>
