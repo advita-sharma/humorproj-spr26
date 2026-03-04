@@ -15,12 +15,27 @@ type Pair = {
 
 export default function CardGrid({ pairs }: { pairs: Pair[] }) {
   const [selected, setSelected] = useState<Pair | null>(null);
-  const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
+  // null = still preloading; Set = preload done
+  const [failedIds, setFailedIds] = useState<Set<string> | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Filter broken images, cap at 67, then re-number
-  const ranked = pairs
-    .filter((p) => !failedIds.has(p.image.id))
+  // Preload all images in parallel before first render so the grid is correct immediately
+  useEffect(() => {
+    if (pairs.length === 0) { setFailedIds(new Set()); return; }
+    const failed = new Set<string>();
+    let pending = pairs.length;
+    pairs.forEach((pair) => {
+      const img = new Image();
+      const done = () => { if (--pending === 0) setFailedIds(new Set(failed)); };
+      img.onload = done;
+      img.onerror = () => { failed.add(pair.image.id); done(); };
+      img.src = pair.image.url;
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Filter broken images, cap at 67, re-number
+  const ranked = (failedIds === null ? [] : pairs)
+    .filter((p) => !failedIds?.has(p.image.id))
     .slice(0, MAX_PAIRS)
     .map((p, i) => ({ ...p, rank: i + 1 }));
 
@@ -28,10 +43,26 @@ export default function CardGrid({ pairs }: { pairs: Pair[] }) {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const visiblePairs = ranked.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-  // If a removal shrinks the total pages, clamp current page
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [totalPages, currentPage]);
+
+  // Skeleton shown while images are being preloaded
+  if (failedIds === null) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        {Array.from({ length: ITEMS_PER_PAGE }).map((_, i) => (
+          <div key={i} className="bg-zinc-900/50 rounded-2xl overflow-hidden border border-zinc-800/50 animate-pulse">
+            <div className="aspect-[4/5] bg-zinc-800" />
+            <div className="p-4 space-y-2">
+              <div className="h-3 bg-zinc-800 rounded w-3/4" />
+              <div className="h-3 bg-zinc-800 rounded w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -66,9 +97,6 @@ export default function CardGrid({ pairs }: { pairs: Pair[] }) {
                 src={pair.image.url}
                 alt={pair.image.image_description || "Funny image"}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                onError={() =>
-                  setFailedIds((prev) => new Set(prev).add(pair.image.id))
-                }
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             </div>
