@@ -21,9 +21,17 @@ type VoteHistory = {
 export default function VoteCard({
   initialCaptions,
   totalRemaining: initialRemaining,
+  disableAutoFetch = false,
+  footer,
+  votingFooter,
+  emptyMessage = "You've voted on all captions!",
 }: {
   initialCaptions: CaptionWithImage[];
   totalRemaining: number;
+  disableAutoFetch?: boolean;
+  footer?: React.ReactNode;
+  votingFooter?: React.ReactNode;
+  emptyMessage?: string;
 }) {
   const [queue, setQueue] = useState<CaptionWithImage[]>(initialCaptions);
   const [lastVote, setLastVote] = useState<VoteHistory | null>(null);
@@ -77,10 +85,10 @@ export default function VoteCard({
   }, [isLoading]);
 
   useEffect(() => {
-    if (queue.length < 3 && !isLoading) {
+    if (!disableAutoFetch && queue.length < 5 && !isLoading) {
       fetchMore();
     }
-  }, [queue.length, isLoading, fetchMore]);
+  }, [queue.length, isLoading, fetchMore, disableAutoFetch]);
 
   const submitVote = async (caption: CaptionWithImage, voteValue: number) => {
     await fetch("/api/vote", {
@@ -201,14 +209,17 @@ export default function VoteCard({
 
   if (!current) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
+      <div className="flex flex-col items-center justify-center py-20 gap-2">
+        <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mb-2">
           <span className="text-2xl">🎉</span>
         </div>
-        <p className="text-zinc-400 text-lg">
-          You&apos;ve voted on all captions!
+        <p className="text-zinc-400 text-lg text-center">
+          {emptyMessage}
         </p>
-        <p className="text-zinc-600 text-sm mt-1">Check back later for more</p>
+        {!footer && (
+          <p className="text-zinc-600 text-sm">Check back later for more</p>
+        )}
+        {footer && <div className="w-full mt-4">{footer}</div>}
       </div>
     );
   }
@@ -392,6 +403,8 @@ export default function VoteCard({
       <p className="text-zinc-600 text-xs">
         Swipe right to upvote, left to downvote
       </p>
+
+      {votingFooter}
     </div>
   );
 }

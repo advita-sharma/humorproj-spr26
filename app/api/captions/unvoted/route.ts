@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
+const BATCH_SIZE = 20;
+
 export async function GET() {
   const supabase = await createClient();
   const {
@@ -21,32 +23,31 @@ export async function GET() {
       .from("captions")
       .select("id, content, image_id")
       .not("content", "is", null)
-      .limit(200),
+      .eq("is_public", true)
+      .limit(50),
   ]);
 
   if (votedResult.error) {
     return NextResponse.json({ error: votedResult.error.message }, { status: 500 });
+  }
+  if (captionsResult.error) {
+    return NextResponse.json({ error: captionsResult.error.message }, { status: 500 });
   }
 
   const votedIds = new Set(
     (votedResult.data || []).map((r) => r.caption_id)
   );
 
-  const rawCaptions = (captionsResult.data || [])
+  const unvoted = (captionsResult.data || [])
     .filter((c) => !votedIds.has(c.id))
-    .slice(0, 20);
-  const captionsError = captionsResult.error;
+    .slice(0, BATCH_SIZE);
 
-  if (captionsError) {
-    return NextResponse.json({ error: captionsError.message }, { status: 500 });
-  }
-
-  if (!rawCaptions || rawCaptions.length === 0) {
+  if (unvoted.length === 0) {
     return NextResponse.json([]);
   }
 
-  // Fetch images in one batch — only those with a URL
-  const imageIds = [...new Set(rawCaptions.map((c) => c.image_id))];
+  // Fetch images in one batch
+  const imageIds = [...new Set(unvoted.map((c) => c.image_id))];
   const { data: images, error: imagesError } = await supabase
     .from("images")
     .select("id, url, image_description")
@@ -61,16 +62,14 @@ export async function GET() {
     (images || []).map((img) => [img.id, img])
   );
 
-  // Only return complete pairs
-  const result = rawCaptions
-    .filter((c) => c.content && imageMap.has(c.image_id))
+  const result = unvoted
+    .filter((c) => imageMap.has(c.image_id))
     .map((c) => ({
       id: c.id,
       content: c.content,
       image_id: c.image_id,
       images: imageMap.get(c.image_id)!,
-    }))
-    .slice(0, 10);
+    }));
 
   return NextResponse.json(result);
 }
