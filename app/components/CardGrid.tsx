@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Pagination from "./Pagination";
 
 const ITEMS_PER_PAGE = 12;
+const MAX_PAIRS = 67;
 
 type Pair = {
   image: { id: string; url: string; image_description: string | null };
@@ -17,9 +18,10 @@ export default function CardGrid({ pairs }: { pairs: Pair[] }) {
   const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Re-number after filtering broken images, then paginate
+  // Filter broken images, cap at 67, then re-number
   const ranked = pairs
     .filter((p) => !failedIds.has(p.image.id))
+    .slice(0, MAX_PAIRS)
     .map((p, i) => ({ ...p, rank: i + 1 }));
 
   const totalPages = Math.max(1, Math.ceil(ranked.length / ITEMS_PER_PAGE));

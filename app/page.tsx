@@ -52,16 +52,16 @@ export default async function Home() {
     (images || []).map((img: Image) => [img.id, img])
   );
 
-  // Multiple captions per image allowed — rank all by like_count, take top 67
+  // Send extra candidates so client can still show 67 after filtering broken images
   const top67 = captions
     .filter((c) => imageMap.has(c.image_id))
     .map((c) => ({
       image: imageMap.get(c.image_id)!,
       caption: c,
       likeCount: c.like_count,
-      rank: 0, // will be assigned client-side after filtering broken images
+      rank: 0, // assigned client-side after filtering broken images
     }))
-    .slice(0, TOP_FUNNIEST);
+    .slice(0, TOP_FUNNIEST * 2); // send 2x buffer
 
   return (
     <div className="min-h-screen bg-[#09090b]">
