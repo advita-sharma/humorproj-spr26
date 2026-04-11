@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 export default function BackToLeaderboard() {
   const pathname = usePathname();
-  if (pathname === "/") return null;
+  if (pathname === "/" || pathname === "/login") return null;
 
   return (
     <div className="max-w-7xl mx-auto px-6 pt-2 flex justify-start">

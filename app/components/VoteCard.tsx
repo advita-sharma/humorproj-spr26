@@ -246,7 +246,7 @@ export default function VoteCard({
             ?
           </button>
           {showDescription && (
-            <div className="absolute top-10 right-0 w-56 p-4 rounded-xl bg-zinc-900 border border-zinc-700/50 shadow-xl shadow-black/40 text-sm text-zinc-300 leading-relaxed z-40">
+            <div className="absolute top-10 left-10 w-56 p-4 rounded-xl bg-zinc-900 border border-zinc-700/50 shadow-xl shadow-black/40 text-sm text-zinc-300 leading-relaxed z-40">
               {current.images?.image_description?.trim() || "hocus pocus you've lost your focus"}
             </div>
           )}
