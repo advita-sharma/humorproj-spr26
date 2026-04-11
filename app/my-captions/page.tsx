@@ -59,17 +59,11 @@ export default async function MyCaptionsPage({
     <div className="min-h-screen bg-[#09090b]">
       <PersistImageId imageId={imageId} />
       <main className="max-w-lg mx-auto px-6 py-8">
-        {captions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center text-2xl">
-              ⏳
-            </div>
-            <p className="text-zinc-400 text-lg">Captions are being generated</p>
-            <p className="text-zinc-600 text-sm">Check back in a moment</p>
-          </div>
-        ) : (
-          <MyCaptionsClient unvoted={unvoted} imageId={imageId} />
-        )}
+        <MyCaptionsClient
+          unvoted={unvoted}
+          imageId={imageId}
+          isGenerating={captions.length === 0}
+        />
       </main>
     </div>
   );

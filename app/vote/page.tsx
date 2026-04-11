@@ -20,7 +20,8 @@ export default async function VotePage() {
       .select("id, content, image_id")
       .not("content", "is", null)
       .eq("is_public", true)
-      .limit(50),
+      .order("created_datetime_utc", { ascending: false })
+      .limit(500),
     supabase
       .from("captions")
       .select("*", { count: "exact", head: true })
@@ -56,11 +57,18 @@ export default async function VotePage() {
     .not("url", "is", null);
 
   const imageMap = new Map(
-    (images || []).map((img) => [img.id, img])
+    (images || [])
+      .filter((img) => typeof img.url === "string" && img.url.startsWith("http"))
+      .map((img) => [img.id, img])
   );
 
   const captions = unvotedCaptions
-    .filter((c) => c.content && imageMap.has(c.image_id))
+    .filter((c) => {
+      if (!c.content || !imageMap.has(c.image_id)) return false;
+      // Drop rows where content is a raw JSON blob instead of caption text
+      const t = c.content.trimStart();
+      return !t.startsWith("{") && !t.startsWith("[");
+    })
     .map((c) => ({
       id: c.id,
       content: c.content,

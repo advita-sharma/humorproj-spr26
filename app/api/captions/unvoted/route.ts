@@ -24,7 +24,8 @@ export async function GET() {
       .select("id, content, image_id")
       .not("content", "is", null)
       .eq("is_public", true)
-      .limit(50),
+      .order("created_datetime_utc", { ascending: false })
+      .limit(500),
   ]);
 
   if (votedResult.error) {
@@ -39,7 +40,11 @@ export async function GET() {
   );
 
   const unvoted = (captionsResult.data || [])
-    .filter((c) => !votedIds.has(c.id))
+    .filter((c) => {
+      if (votedIds.has(c.id) || !c.content) return false;
+      const t = c.content.trimStart();
+      return !t.startsWith("{") && !t.startsWith("[");
+    })
     .slice(0, BATCH_SIZE);
 
   if (unvoted.length === 0) {
@@ -59,7 +64,9 @@ export async function GET() {
   }
 
   const imageMap = new Map(
-    (images || []).map((img) => [img.id, img])
+    (images || [])
+      .filter((img) => typeof img.url === "string" && img.url.startsWith("http"))
+      .map((img) => [img.id, img])
   );
 
   const result = unvoted

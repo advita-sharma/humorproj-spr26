@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
@@ -17,27 +18,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "imageId is required" }, { status: 400 });
   }
 
-  const res = await fetch(
-    "https://api.almostcrackd.ai/pipeline/generate-captions",
-    {
+  const token = session.access_token;
+
+  // Fire the external call after the response is sent — client doesn't have to wait
+  after(async () => {
+    await fetch("https://api.almostcrackd.ai/pipeline/generate-captions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ imageId }),
-    }
-  );
+      body: JSON.stringify({ imageId, count: 5 }),
+    });
+  });
 
-  if (!res.ok) {
-    const text = await res.text();
-    return NextResponse.json(
-      { error: `Pipeline API error: ${text}` },
-      { status: res.status }
-    );
-  }
-
-  const data = await res.json();
-  // data is an array of caption records
-  return NextResponse.json(data);
+  return NextResponse.json({ status: "generating" }, { status: 202 });
 }
