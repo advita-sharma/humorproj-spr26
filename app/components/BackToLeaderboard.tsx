@@ -8,7 +8,7 @@ export default function BackToLeaderboard() {
   if (pathname === "/") return null;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 pt-2 flex justify-end">
+    <div className="max-w-7xl mx-auto px-6 pt-2 flex justify-start">
       <Link href="/" className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
         ← back to leaderboard
       </Link>

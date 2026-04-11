@@ -239,7 +239,7 @@ export default function UploadPage() {
                 {/* Finalized caption cards */}
                 {finalizedCaptions.map((caption, i) => (
                   <div key={i} className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-lg">
-                    <img src={preview!} alt="Your image" className="w-full max-h-64 object-cover" />
+                    <img src={preview!} alt="Your image" className="w-full aspect-[3/4] object-cover" />
                     <div className="px-4 py-3 border-t border-zinc-800">
                       <p className="text-white text-sm leading-relaxed">{caption}</p>
                     </div>
@@ -248,7 +248,7 @@ export default function UploadPage() {
 
                 {/* Input card */}
                 <div className="rounded-2xl overflow-hidden border border-zinc-700 bg-zinc-900 focus-within:border-fuchsia-500/50 transition-colors shadow-lg">
-                  <img src={preview!} alt="Your image" className="w-full max-h-64 object-cover" />
+                  <img src={preview!} alt="Your image" className="w-full aspect-[3/4] object-cover" />
                   <div className="px-4 pt-3 pb-2 border-t border-zinc-800">
                     <textarea
                       ref={captionRef}
