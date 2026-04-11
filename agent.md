@@ -15,3 +15,4 @@
 7. Global Navbar — shared across all pages via layout.tsx. Shows: logo (→ /), Vote, Generate your own, Profile. Hidden on login page.
 8. Leaderboard updates — top 67 now allows multiple captions per image, broken image cards hidden entirely, 12 per page, cards are tappable (full-image modal).
 9. Voting filters — only captions with is_public=true shown in vote/leaderboard flows.
+10. Upload page UX overhaul — Removed email flow entirely. AI mode: "Generate 5 Captions" button, "15–30 seconds" note, side-by-side "← Back" (zinc) + "✍️ Write my own" (purple gradient) buttons. Own mode: image-caption card with textarea embedded; Enter/"✓ Done" finalizes into read-only card; side-by-side "🖼️ Use another image" (zinc) + "✨ Switch to AI" (purple gradient) buttons. Drop zone hidden in own mode. MyCaptionsClient: generating spinner enlarged (w-24 container, w-12 spinner, border-4).

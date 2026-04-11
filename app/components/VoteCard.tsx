@@ -44,6 +44,7 @@ export default function VoteCard({
     null
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [showDescription, setShowDescription] = useState(false);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
@@ -124,6 +125,7 @@ export default function VoteCard({
       setExitDirection(null);
       setDragX(0);
       setIsAnimating(false);
+      setShowDescription(false);
 
       // If this caption already has a row in the DB (re-vote after undo), update it
       if (votedCaptionIds.has(current.id)) {
@@ -236,16 +238,19 @@ export default function VoteCard({
       {/* Card area with ? button outside */}
       <div className="relative w-full max-w-sm select-none">
         {/* ? button — outside card, top-right */}
-        {current.images?.image_description && (
-          <div className="absolute -top-2 -right-2 z-30 group">
-            <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700/50 flex items-center justify-center text-sm font-bold text-zinc-300 cursor-help hover:bg-zinc-700 hover:text-white">
-              ?
+        <div className="absolute -top-2 -right-2 z-30">
+          <button
+            onClick={() => setShowDescription((v) => !v)}
+            className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700/50 flex items-center justify-center text-sm font-bold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+          >
+            ?
+          </button>
+          {showDescription && (
+            <div className="absolute top-10 left-10 w-[50rem] p-4 rounded-xl bg-zinc-900 border border-zinc-700/50 shadow-xl shadow-black/40 text-sm text-zinc-300 leading-relaxed z-40">
+              {current.images?.image_description?.trim() || "hocus pocus you've lost your focus"}
             </div>
-            <div className="absolute top-full right-0 mt-2 w-64 p-3 rounded-xl bg-zinc-900 border border-zinc-700/50 shadow-xl shadow-black/40 text-sm text-zinc-300 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-40">
-              {current.images.image_description}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Next card preview (behind current) */}
         {queue[1] && (
