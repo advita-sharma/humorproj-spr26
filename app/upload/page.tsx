@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -16,7 +16,7 @@ const SUPPORTED_TYPES = [
 
 type Mode = null | "own";
 
-export default function UploadPage() {
+function UploadPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -347,5 +347,13 @@ export default function UploadPage() {
         {error && <p className="text-sm text-red-400 px-1">{error}</p>}
       </main>
     </div>
+  );
+}
+
+export default function UploadPage() {
+  return (
+    <Suspense>
+      <UploadPageInner />
+    </Suspense>
   );
 }
