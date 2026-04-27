@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function GenerateMoreButton({ imageId }: { imageId: string }) {
   const [triggered, setTriggered] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
 
   async function handleClick() {
     if (triggered) return;
@@ -20,9 +22,12 @@ export default function GenerateMoreButton({ imageId }: { imageId: string }) {
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       setError(data.error ?? "Failed to generate captions");
-      setTriggered(false); // re-enable only on error
+      setTriggered(false);
+      return;
     }
-    // On success: stay disabled — polling on my-captions will surface new captions
+
+    // Redirect to the generating screen
+    router.push(`/my-captions?imageId=${imageId}&generating=1`);
   }
 
   return (

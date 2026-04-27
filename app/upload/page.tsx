@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 const SUPPORTED_TYPES = [
   "image/jpeg",
@@ -17,13 +18,21 @@ type Mode = null | "own";
 
 export default function UploadPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Detect pre-load mode synchronously so the correct UI shows on the first render.
+  const _preloadId = searchParams.get("imageId");
+  const _preloadMode = searchParams.get("mode");
+  const isPreloadOwn = _preloadMode === "own" && !!_preloadId;
+
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string>("");
   const [isDragOver, setIsDragOver] = useState(false);
   const [lastImageId, setLastImageId] = useState<string | null>(null);
-  const [mode, setMode] = useState<Mode>(null);
+  const [mode, setMode] = useState<Mode>(isPreloadOwn ? "own" : null);
+  const [preloadedImageId, setPreloadedImageId] = useState<string | null>(isPreloadOwn ? _preloadId : null);
 
   // Own-mode state
   const [cardCaption, setCardCaption] = useState("");
@@ -35,6 +44,21 @@ export default function UploadPage() {
   useEffect(() => {
     const stored = localStorage.getItem("lastImageId");
     if (stored) setLastImageId(stored);
+  }, []);
+
+  // Fetch the image URL for pre-load mode (mode/imageId already set synchronously above).
+  useEffect(() => {
+    if (!preloadedImageId) return;
+    const supabase = createClient();
+    supabase
+      .from("images")
+      .select("url")
+      .eq("id", preloadedImageId)
+      .single()
+      .then(({ data }) => {
+        if (data?.url) setPreview(data.url);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -71,6 +95,7 @@ export default function UploadPage() {
   function resetImage() {
     setFile(null);
     setPreview(null);
+    setPreloadedImageId(null);
     setError("");
     setMode(null);
     setCardCaption("");
@@ -95,8 +120,6 @@ export default function UploadPage() {
 
   async function uploadAndRegister(): Promise<{ imageId: string; cdnUrl: string } | null> {
     if (!file) return null;
-    setIsUploading(true);
-    setError("");
 
     const presignRes = await fetch("/api/pipeline/presign", {
       method: "POST",
@@ -138,6 +161,22 @@ export default function UploadPage() {
   }
 
   async function handleGenerate() {
+    setIsUploading(true);
+    setError("");
+
+    // If we arrived with an existing imageId (from "Write my own" on the voting screen),
+    // skip presign/upload/register — the image is already in the pipeline.
+    if (preloadedImageId) {
+      fetch("/api/pipeline/generate-captions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageId: preloadedImageId }),
+      });
+      localStorage.setItem("lastImageId", preloadedImageId);
+      router.push(`/my-captions?imageId=${preloadedImageId}&generating=1`);
+      return;
+    }
+
     const result = await uploadAndRegister();
     if (!result) return;
 
@@ -161,8 +200,8 @@ export default function UploadPage() {
           </p>
         </div>
 
-        {/* Resume banner */}
-        {lastImageId && !file && (
+        {/* Resume banner — hidden when we arrived with a pre-loaded image */}
+        {lastImageId && !file && !preloadedImageId && (
           <Link
             href={`/my-captions?imageId=${lastImageId}`}
             className="flex items-center justify-between px-4 py-3 bg-violet-500/10 border border-violet-500/20 rounded-xl hover:bg-violet-500/15 transition-colors"
@@ -175,8 +214,8 @@ export default function UploadPage() {
           </Link>
         )}
 
-        {/* Drop zone — hidden in own mode (image lives in the cards) */}
-        {mode !== "own" && (
+        {/* Drop zone — hidden in own mode or when a pre-loaded image is incoming */}
+        {mode !== "own" && !preloadedImageId && (
           <div
             className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-colors ${
               isDragOver
@@ -210,7 +249,7 @@ export default function UploadPage() {
         />
 
         {/* Mode chooser + panels */}
-        {file && (
+        {(file || preloadedImageId) && (
           <>
             {/* Mode picker */}
             {mode === null && (
@@ -234,12 +273,17 @@ export default function UploadPage() {
             )}
 
             {/* ── Write your own mode ── */}
-            {mode === "own" && (
+            {mode === "own" && !preview && preloadedImageId && (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            {mode === "own" && preview && (
               <div className="flex flex-col gap-4">
                 {/* Finalized caption cards */}
                 {finalizedCaptions.map((caption, i) => (
                   <div key={i} className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-lg">
-                    <img src={preview!} alt="Your image" className="w-full aspect-[3/4] object-cover" />
+                    <img src={preview} alt="Your image" className="w-full aspect-[3/4] object-cover" />
                     <div className="px-4 py-3 border-t border-zinc-800">
                       <p className="text-white text-sm leading-relaxed">{caption}</p>
                     </div>
@@ -248,7 +292,7 @@ export default function UploadPage() {
 
                 {/* Input card */}
                 <div className="rounded-2xl overflow-hidden border border-zinc-700 bg-zinc-900 focus-within:border-fuchsia-500/50 transition-colors shadow-lg">
-                  <img src={preview!} alt="Your image" className="w-full aspect-[3/4] object-cover" />
+                  <img src={preview} alt="Your image" className="w-full aspect-[3/4] object-cover" />
                   <div className="px-4 pt-3 pb-2 border-t border-zinc-800">
                     <textarea
                       ref={captionRef}
@@ -281,7 +325,7 @@ export default function UploadPage() {
                 <div className="flex gap-3 pt-1">
                   <button
                     onClick={resetImage}
-                    className="flex-1 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 text-sm font-medium transition-colors"
+                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white text-sm font-semibold transition-all shadow-lg shadow-violet-500/25"
                   >
                     🖼️ Use another image
                   </button>

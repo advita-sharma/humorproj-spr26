@@ -22,6 +22,7 @@ export default function VoteCard({
   initialCaptions,
   totalRemaining: initialRemaining,
   disableAutoFetch = false,
+  containImage = false,
   footer,
   votingFooter,
   emptyMessage = "You've voted on all captions!",
@@ -29,6 +30,7 @@ export default function VoteCard({
   initialCaptions: CaptionWithImage[];
   totalRemaining: number;
   disableAutoFetch?: boolean;
+  containImage?: boolean;
   footer?: React.ReactNode;
   votingFooter?: React.ReactNode;
   emptyMessage?: string;
@@ -246,7 +248,11 @@ export default function VoteCard({
             ?
           </button>
           {showDescription && (
-            <div className="absolute top-10 left-10 w-56 p-4 rounded-xl bg-zinc-900 border border-zinc-700/50 shadow-xl shadow-black/40 text-sm text-zinc-300 leading-relaxed z-40">
+            // ── description popup ──────────────────────────────────────────
+            // Position:  top-10 (below the ? button)  left-10 (opens rightward)
+            // Width:     w-56 (14 rem / 224 px) — change here to resize it
+            // ───────────────────────────────────────────────────────────────
+            <div className="absolute top-10 left-10 w-100 p-4 rounded-xl bg-zinc-900 border border-zinc-700/50 shadow-xl shadow-black/40 text-sm text-zinc-300 leading-relaxed z-40">
               {current.images?.image_description?.trim() || "hocus pocus you've lost your focus"}
             </div>
           )}
@@ -291,16 +297,28 @@ export default function VoteCard({
           </div>
 
           {/* Image */}
-          <div className="relative aspect-[3/4] overflow-hidden">
-            <img
-              src={current.images.url}
-              alt={current.images.image_description || "Caption image"}
-              className="w-full h-full object-cover"
-              draggable={false}
-            />
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-          </div>
+          {containImage ? (
+            <div className="relative bg-black flex items-center justify-center overflow-hidden" style={{ maxHeight: "65vh" }}>
+              <img
+                src={current.images.url}
+                alt={current.images.image_description || "Caption image"}
+                className="w-full object-contain"
+                style={{ maxHeight: "65vh" }}
+                draggable={false}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+            </div>
+          ) : (
+            <div className="relative aspect-[3/4] overflow-hidden">
+              <img
+                src={current.images.url}
+                alt={current.images.image_description || "Caption image"}
+                className="w-full h-full object-cover"
+                draggable={false}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            </div>
+          )}
 
           {/* Caption */}
           <div className="absolute bottom-0 left-0 right-0 p-5">
@@ -311,7 +329,7 @@ export default function VoteCard({
         </div>
       </div>
 
-      {/* Voting buttons — doubled size */}
+      {/* Voting buttons */}
       <div className="flex items-center gap-6">
         {/* Downvote */}
         <button

@@ -17,14 +17,13 @@ type CaptionWithImage = {
   };
 };
 
+const purpleBtn = "flex-1 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white text-sm font-semibold text-center transition-all shadow-lg shadow-violet-500/25";
+
 function DoneFooter({ imageId }: { imageId: string }) {
   return (
-    <div className="flex flex-col gap-2 w-full pt-2">
-      <Link
-        href="/upload"
-        className="w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 text-sm font-medium text-center transition-colors"
-      >
-        Use another image
+    <div className="flex gap-2 w-full pt-2">
+      <Link href="/upload" className={purpleBtn}>
+        🖼️ Use another image
       </Link>
       <GenerateMoreButton imageId={imageId} />
     </div>
@@ -34,13 +33,12 @@ function DoneFooter({ imageId }: { imageId: string }) {
 function VotingFooter({ imageId }: { imageId: string }) {
   return (
     <div className="flex gap-2 w-full pt-2">
-      <Link
-        href="/upload"
-        className="flex-1 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 text-sm font-medium text-center transition-colors"
-      >
-        Use another image
+      <Link href="/upload" className={purpleBtn}>
+        🖼️ Use another image
       </Link>
-      <GenerateMoreButton imageId={imageId} />
+      <Link href={`/upload?imageId=${imageId}&mode=own`} className={purpleBtn}>
+        Write my own
+      </Link>
     </div>
   );
 }
@@ -49,14 +47,16 @@ export default function MyCaptionsClient({
   unvoted,
   imageId,
   isGenerating,
+  captionsCount,
 }: {
   unvoted: CaptionWithImage[];
   imageId: string;
   isGenerating: boolean;
+  captionsCount: number;
 }) {
   const router = useRouter();
 
-  // Auto-poll every 3s while AI captions are still being generated
+  // Poll every 3s while the spinner is showing (no unvoted captions yet).
   useEffect(() => {
     if (!isGenerating) return;
     const id = setInterval(() => router.refresh(), 3000);
@@ -81,10 +81,11 @@ export default function MyCaptionsClient({
 
   return (
     <VoteCard
-      key={unvoted.length}
+      key={captionsCount}
       initialCaptions={unvoted}
       totalRemaining={unvoted.length}
       disableAutoFetch
+      containImage
       emptyMessage="You've voted on all captions for this image!"
       footer={<DoneFooter imageId={imageId} />}
       votingFooter={<VotingFooter imageId={imageId} />}

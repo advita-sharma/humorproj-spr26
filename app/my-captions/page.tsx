@@ -6,9 +6,9 @@ import PersistImageId from "../components/PersistImageId";
 export default async function MyCaptionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ imageId?: string }>;
+  searchParams: Promise<{ imageId?: string; generating?: string }>;
 }) {
-  const { imageId } = await searchParams;
+  const { imageId, generating } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -62,7 +62,8 @@ export default async function MyCaptionsPage({
         <MyCaptionsClient
           unvoted={unvoted}
           imageId={imageId}
-          isGenerating={captions.length === 0}
+          captionsCount={captions.length}
+          isGenerating={captions.length === 0 || (generating === "1" && unvoted.length === 0)}
         />
       </main>
     </div>
